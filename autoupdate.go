@@ -286,6 +286,10 @@ func (a AutoUpdate) parseJson(remoteUrl string) (*VersionJson, error) {
 
 	defer func(Body io.ReadCloser) { _ = Body.Close() }(res.Body)
 
+	if res.StatusCode > 399 {
+		return nil, errors.New(res.Status)
+	}
+
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
