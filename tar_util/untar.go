@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Untar takes a destination path and a reader; a tar reader loops over the tarfile
@@ -40,7 +41,9 @@ func Untar(dst string, r io.Reader) ([]string, error) {
 
 		// the target location where the dir/file should be created
 		target := filepath.Join(dst, header.Name)
-		result = append(result, target)
+		if !strings.HasPrefix(header.Name, "._") {
+			result = append(result, target)
+		}
 
 		// the following switch could also be done using fi.Mode(), not sure if there
 		// a benefit of using one vs. the other.
