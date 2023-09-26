@@ -5,12 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/goware/urlx"
-	"github.com/hashicorp/go-version"
-	"github.com/rs/zerolog"
-	"github.com/schollz/progressbar/v3"
-	"github.com/sephiroth74/go-autoupdate/io_util"
-	"github.com/sephiroth74/go-autoupdate/tar_util"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -18,13 +12,20 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+
+	"github.com/charmbracelet/log"
+	"github.com/goware/urlx"
+	"github.com/hashicorp/go-version"
+	"github.com/schollz/progressbar/v3"
+	"github.com/sephiroth74/go-autoupdate/io_util"
+	"github.com/sephiroth74/go-autoupdate/tar_util"
 )
 
 type Options struct {
 	BaseUrl  string
 	Version  string
 	SelfName string
-	Logger   *zerolog.Logger
+	Logger   *log.Logger
 }
 
 type AutoUpdate struct {
@@ -85,7 +86,7 @@ func (a AutoUpdate) getNewVersion() (*VersionJson, error) {
 
 func (a AutoUpdate) installUpdate(v VersionJson, bar *progressbar.ProgressBar) error {
 	if a.Options.Logger != nil {
-		a.Options.Logger.Info().Msgf("installing %s update..", v.Version)
+		a.Options.Logger.Infof("installing %s update..", v.Version)
 	}
 
 	// 1/4 download update
@@ -116,7 +117,7 @@ func (a AutoUpdate) downloadUpdate(v VersionJson, bar *progressbar.ProgressBar) 
 	}
 
 	if a.Options.Logger != nil {
-		a.Options.Logger.Debug().Msgf("[1/4] downloading %s..", fileUrl)
+		a.Options.Logger.Debugf("[1/4] downloading %s..", fileUrl)
 	}
 
 	resp, err := http.Get(fileUrl)
@@ -133,7 +134,7 @@ func (a AutoUpdate) downloadUpdate(v VersionJson, bar *progressbar.ProgressBar) 
 	dstFilename := file.Name()
 
 	if a.Options.Logger != nil {
-		a.Options.Logger.Trace().Msgf("downloading to %s..", dstFilename)
+		a.Options.Logger.Debugf("downloading to %s..", dstFilename)
 	}
 
 	defer func(file *os.File) { _ = file.Close() }(file)
@@ -157,14 +158,14 @@ func (a AutoUpdate) downloadUpdate(v VersionJson, bar *progressbar.ProgressBar) 
 	}
 
 	if a.Options.Logger != nil {
-		a.Options.Logger.Trace().Msgf("filesize: %d", total)
+		a.Options.Logger.Debugf("filesize: %d", total)
 	}
 	return dstFilename, nil
 }
 
 func (a AutoUpdate) extractUpdate(v VersionJson, tarFilename string) (string, error) {
 	if a.Options.Logger != nil {
-		a.Options.Logger.Info().Msg("[3/4] extracting update")
+		a.Options.Logger.Info("[3/4] extracting update")
 	}
 	// creating reader..
 	reader, err := os.Open(tarFilename)
@@ -177,7 +178,7 @@ func (a AutoUpdate) extractUpdate(v VersionJson, tarFilename string) (string, er
 	dstDir := filepath.Join(os.TempDir(), v.Checksum)
 
 	if a.Options.Logger != nil {
-		a.Options.Logger.Trace().Msgf("extrating %s into %s", filepath.Base(tarFilename), dstDir)
+		a.Options.Logger.Debugf("extrating %s into %s", filepath.Base(tarFilename), dstDir)
 	}
 
 	result, err := tar_util.Untar(dstDir, reader)
@@ -192,7 +193,7 @@ func (a AutoUpdate) extractUpdate(v VersionJson, tarFilename string) (string, er
 	extractedFile := result[0]
 
 	if a.Options.Logger != nil {
-		a.Options.Logger.Trace().Msgf("extracted file: %s", extractedFile)
+		a.Options.Logger.Debugf("extracted file: %s", extractedFile)
 	}
 
 	if !io_util.FileExists(extractedFile) {
@@ -204,7 +205,7 @@ func (a AutoUpdate) extractUpdate(v VersionJson, tarFilename string) (string, er
 
 func (a AutoUpdate) verifyChecksum(v VersionJson, tarFilename string) error {
 	if a.Options.Logger != nil {
-		a.Options.Logger.Debug().Msg("[2/4] verifying checksum")
+		a.Options.Logger.Debug("[2/4] verifying checksum")
 	}
 
 	sha, err := a.computeChecksum(tarFilename)
@@ -215,7 +216,7 @@ func (a AutoUpdate) verifyChecksum(v VersionJson, tarFilename string) error {
 	checksum := fmt.Sprintf("%x", sha.Sum(nil))
 
 	if a.Options.Logger != nil {
-		a.Options.Logger.Trace().Msgf("file checksum: %s", checksum)
+		a.Options.Logger.Debugf("file checksum: %s", checksum)
 	}
 
 	if checksum != v.Checksum {
@@ -241,7 +242,7 @@ func (a AutoUpdate) computeChecksum(tarFilename string) (hash.Hash, error) {
 
 func (a AutoUpdate) writeUpdate(srcFile string, dstFile string) error {
 	if a.Options.Logger != nil {
-		a.Options.Logger.Info().Msgf("[4/4] writing update to %s..", dstFile)
+		a.Options.Logger.Infof("[4/4] writing update to %s..", dstFile)
 	}
 
 	r, err := os.Open(srcFile)
@@ -275,7 +276,7 @@ func (a AutoUpdate) parseJson(remoteUrl string) (*VersionJson, error) {
 	}
 
 	if a.Options.Logger != nil {
-		a.Options.Logger.Debug().Msgf("Reading remote version url %s", url)
+		a.Options.Logger.Debugf("Reading remote version url %s", url)
 	}
 
 	res, err := http.Get(url)
