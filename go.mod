@@ -26,3 +26,5 @@ require (
 	golang.org/x/term v0.10.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 )
+
+replace github.com/charmbracelet/log => github.com/sephiroth74/log v0.0.0-20230928164420-1af6a43c36c4
